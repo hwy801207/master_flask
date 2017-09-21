@@ -1,5 +1,6 @@
 class Config:
-    pass
+    SQLALCHEMY_TRACK_MODIFICATIONS=False
+    SQLALCHEMY_ECHO=False
 
 class PrdConfig(Config):
     pass
