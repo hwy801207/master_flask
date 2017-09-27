@@ -1,10 +1,21 @@
 from flask import Flask, render_template
 from config import DevConfig
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField
+from wtforms.validators import DataRequired, Length
+import datetime
 
 app = Flask(__name__)
 app.config.from_object(DevConfig)
 db = SQLAlchemy(app)
+
+class CommentForm(FlaskForm):
+    name = StringField('Name',
+        validators=[DataRequired(), Length(max=255)]
+    )
+    text = TextAreaField(u'Comment', validators=[DataRequired(),])
+
 
 # 连接表
 post_tags = db.Table('post_tags',
@@ -20,7 +31,7 @@ class Post(db.Model):
     user_id = db.Column(db.Integer(), db.ForeignKey('user_.id'))
     comments = db.relationship('Comment', backref='post', lazy="dynamic")
     # Post 维护多对多的关系
-    tags = db.relationship('Tag', secondary=post_tags, backref=db.backref('post', lazy='dynamic'))
+    tags = db.relationship('Tag', secondary=post_tags, backref=db.backref('posts', lazy='dynamic'))
 
     def __init__(self, title):
         self.title = title
@@ -88,8 +99,18 @@ def home(page=1):
             top_tags=top_tags
             )
 
-@app.route("/post/<int:post_id>")
+@app.route("/post/<int:post_id>", methods=('GET', 'POST'))
 def post(post_id):
+    form = CommentForm()
+    if form.validate_on_submit():
+        new_comment = Comment()
+        new_comment.name = form.name.data
+        new_comment.text = form.text.data
+        new_comment.post_id = post_id
+        new_comment.date = datetime.datetime.now()
+        db.session.add(new_comment)
+        db.session.commit()
+
     post = Post.query.get_or_404(post_id)
     tags = post.tags
     comments = post.comments.order_by(Comment.date.desc()).all()
@@ -101,7 +122,8 @@ def post(post_id):
                tags=tags,
                comments=comments,
                recent=recent,
-               top_tags=top_tags
+               top_tags=top_tags,
+               form=form,
     )
 
 @app.route("/tag/<string:tag_name>")
@@ -112,7 +134,7 @@ def tag(tag_name):
     return render_template(
                'tag.html',
                post=post,
-               tags=tags,
+               tag=tag,
                recent=recent,
                top_tags=top_tags
     )

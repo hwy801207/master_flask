@@ -1,6 +1,7 @@
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS=False
     SQLALCHEMY_ECHO=False
+    SECRET_KEY="youSeCret%34#"
 
 class PrdConfig(Config):
     pass
